@@ -1,0 +1,86 @@
+﻿@page "/login"
+@inject UserService userService
+@inject NavigationManager navigationManager
+
+<MudText Typo="Typo.h6">Login</MudText>
+
+<MudTextField Label="Username" @bind-Value="username"></MudTextField>
+<MudTextField @bind-Value="password" Label="Password" Variant="Variant.Text" InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Show Password" />
+<MudButton Style="margin-top:10px" Disabled="@_processing" OnClick="Authenticate" Variant="Variant.Filled" Color="Color.Primary">
+    @if (_processing)
+    {
+        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+        <MudText Class="ms-2">Processing</MudText>
+    }
+    else
+    {
+        <MudText>Login</MudText>
+    }
+</MudButton>
+@if (isError == true)
+{
+    <MudAlert Severity="Severity.Error" IsOpen="@isError" Snackbar="true">
+        @error
+    </MudAlert>
+}
+
+    @code {
+
+    private string username;
+    private string password;
+    private string error;
+    private bool isError;
+    private bool _processing = false;
+    public string Password { get; set; }
+    bool isShow;
+
+    private void Authenticate()
+    {
+        var user = userService.Login(username, password);
+
+        if (user != null)
+        {
+            if (user.Role == Role.Staff)
+            {
+                navigationManager.NavigateTo("/");
+            }
+            else if (user.Role == Role.Admin)
+            {
+                navigationManager.NavigateTo("/counter");
+            }
+        }
+        else
+        {
+            isError = true;
+            error = "Invalid credentials";
+        }
+    }
+
+
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    void ButtonTestclick()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+    async Task ProcessSomething()
+    {
+        _processing = true;
+        await Task.Delay(2000);
+        _processing = false;
+    }
+
+}

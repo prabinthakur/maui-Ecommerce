@@ -1,0 +1,27 @@
+﻿<!-- EditProduct_Dialog.razor -->
+<MudDialog>
+    <DialogContent>
+        <!-- Your form controls for editing product details -->
+        <MudTextField T="string" Label="Name" @bind-Value="editedProduct.name"></MudTextField>
+        <MudTextField T="int" Label="Price" @bind-Value="editedProduct.price"></MudTextField>
+        <MudSelect @bind-Value="editedProduct.type" Label="Type" AnchorOrigin="Origin.BottomCenter">
+            @foreach (ProductType value in Enum.GetValues(typeof(ProductType)))
+            {
+                <MudSelectItem Value="@value" />
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Model.Product editedProduct { get; set; }
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(editedProduct));
+    void Cancel() => MudDialog.Cancel();
+}

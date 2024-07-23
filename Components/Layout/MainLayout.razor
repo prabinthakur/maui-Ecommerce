@@ -1,0 +1,27 @@
+﻿@inherits LayoutComponentBase
+@inject   NavigationManager navigationManager
+@inject UserService userService
+
+<MudThemeProvider />
+<MudDialogProvider />
+<div class="page">
+    @if (userService.CurrentUser != null)
+    {
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+    }
+    
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+@code{
+    protected override void OnInitialized()
+    {
+        navigationManager.NavigateTo("/login");
+    }
+
+}

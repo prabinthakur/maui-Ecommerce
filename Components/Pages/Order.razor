@@ -1,0 +1,199 @@
+﻿@page "/order"
+
+ <MudPaper Height="800px" Width="100%" Square="true" >
+    @if (showCallAlert == false)
+    {
+        <MudAlert Severity="Severity.Success" ContentAlignment="HorizontalAlignment.Center" ShowCloseIcon="true" CloseIconClicked="(() => showCallAlert=true)">@messgae</MudAlert>
+    }
+    @if (showCallAlertError == false)
+    {
+        <MudAlert Severity="Severity.Error" ContentAlignment="HorizontalAlignment.Center" ShowCloseIcon="true" CloseIconClicked="(() => showCallAlertError=true)">@messgae</MudAlert>
+    }
+<MudGrid Spacing="@spacing" Justify="Justify.Center">
+    <MudItem>
+        <MudPaper Height="600px" Width="370px">
+            <MudTable Items="@FilteredProducts()">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Products</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString1" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Price</MudTh>
+                    <MudTh>Type</MudTh>
+                </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nr">@context.name</MudTd>
+                            <MudTd DataLabel="Sign">@context.price</MudTd>
+                            <MudTd DataLabel="Name">@context.type</MudTd>
+                            <MudTd>
+                                <MudFab Color="Color.Primary" @onclick="() => AddToOrder(context)" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" />
+                            </MudTd>
+                        </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+        <MudItem>
+            <MudPaper Height="600px" Width="400px">
+                <MudTable Items="@orderProducts">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Order Products</MudText>
+                        <MudSpacer />
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Price</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Quantity</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nr">@context.Product.name</MudTd>
+                        <MudTd DataLabel="Sign">@context.Product.price</MudTd>
+                        <MudTd DataLabel="Name">@context.Product.type</MudTd>
+                        <MudTd>
+                            <MudNumericField @bind-Value="@context.Quantity" Label="Quantity" Variant="Variant.Text" Min="1" Max="10" />
+                        </MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Variant="Variant.Filled" Color="Color.Error" Size="Size.Medium" @onclick="() => RemoveFromOrder(context)" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                    <MudCard>
+                        <MudCardContent>
+                        <MudNumericField @bind-Value="@usernumber" T="string" HideSpinButtons="true" Label="Outlined" Variant="Variant.Outlined" MaxLength="10" />
+                       
+                    </MudCardContent>
+                     <MudText Style="margin-bottom:20px">Total Amount: <span style="color:red"> @TotalAmount</span> </MudText>
+                    <MudText Style="margin-bottom:20px">Total Amount: <span style="color:red">@discountedTotalAmount</span> </MudText>
+                    <MudCardActions>
+                        <MudButton OnClick="AddOrder" HideSpinButtons="true" Variant="Variant.Text" Color="Color.Primary">Order</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+ </MudPaper>
+@code {
+    public string messgae;
+    private string usernumber { get; set; } = "";
+    public int spacing { get; set; } = 3;
+    private bool showCallAlert = true;
+    private bool showCallAlertError = true;
+    private string searchString1 = "";
+    private Element selectedItem1 = null;
+    private List<Model.Product> products = new List<Model.Product>();
+    private List<Model.OrderItem> orderProducts = new List<Model.OrderItem>();
+    private int quantity = 1;
+    public decimal TotalAmount => orderProducts.Sum(item => item.Product.price * item.Quantity);
+    private Dictionary<Guid, int> productQuantities = new Dictionary<Guid, int>();
+    public decimal discountedTotalAmount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products ??= new List<Model.Product>();
+        products.AddRange(await ProductService.GetAllAsync());
+    }
+
+
+
+    private bool FilterFunc(Model.Product product, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (product.name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
+    private IEnumerable<Model.Product> FilteredProducts()
+    {
+        return products?.Where(product => FilterFunc(product, searchString1)) ?? Enumerable.Empty<Model.Product>();
+    }
+
+    private Model.Product selectedProduct;
+
+    private void AddToOrder(Model.Product product)
+    {
+        var existingOrderItem = orderProducts.FirstOrDefault(item => item.Product.Id == product.Id);
+
+        if (existingOrderItem != null)
+        {
+            existingOrderItem.Quantity += 1;
+            productQuantities[product.Id] = existingOrderItem.Quantity;
+        }
+        else
+        {
+            var orderItem = new Model.OrderItem
+                {
+                    Product = product,
+                    Quantity = 1
+                };
+
+            orderProducts.Add(orderItem);
+            productQuantities[product.Id] = 1;
+        }
+    }
+
+
+    private async Task AddOrder()
+    {
+        Console.WriteLine("hello");
+        try
+        {
+            if (orderProducts.Any() && !string.IsNullOrWhiteSpace(usernumber))
+            {
+                var memeber = new Model.Memebership
+                    {
+                        Number = usernumber,
+                        JoinedDate = DateOnly.FromDateTime(DateTime.UtcNow)
+                    };
+                var existingMemberships = await MembershipService.GetAllAsync();
+                var existingMember = existingMemberships.FirstOrDefault(m => m.Number == usernumber);
+
+                if (existingMember == null)
+                {
+                    var newMemberships = new List<Model.Memebership> { memeber };
+                    await MembershipService.AddMemember(newMemberships);
+                }
+
+                var order = new Model.Order
+                    {
+                        Number = usernumber,
+                        OrderItems = new List<Model.OrderItem>(orderProducts),
+                        TotalAmount = TotalAmount,
+                        DiscountAmount = discountedTotalAmount,
+                        Date = DateOnly.FromDateTime(DateTime.UtcNow)
+                    };
+                Console.WriteLine(order);
+                await OrderService.AddOrderAsync(order);
+                showCallAlert = false;
+                messgae = "Ordered successfully";
+            }
+            else
+            {
+                showCallAlertError = false;
+                messgae = "Please add products to the order and enter a valid order number.";
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error in AddOrder: {e.Message}");
+        }
+        finally
+        {
+            orderProducts.Clear();
+            usernumber = "";
+        }
+    }
+
+    private void RemoveFromOrder(Model.OrderItem orderItem)
+    {
+        orderProducts.Remove(orderItem);
+        productQuantities[orderItem.Product.Id] = orderItem.Quantity;
+    }
+
+   
+}

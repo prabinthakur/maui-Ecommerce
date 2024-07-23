@@ -1,0 +1,38 @@
+﻿@page "/addproduct"
+@inject NavigationManager navigationManager
+
+<MudPaper Height="400px" Width="100%">
+    <MudContainer MaxWidth="MaxWidth.Small">
+        <MudForm >
+            <MudTextField @bind-Value="productModel.name" T="string" Label="Product Name" Required="true" RequiredError="Product name is required!" />
+            <MudNumericField @bind-Value="productModel.price" HideSpinButtons="true" Label="Price" Variant="Variant.Text" Min="0" Max="1000" />
+            <MudSelect @bind-Value="productModel.type" T="ProductType" Label="Type" AnchorOrigin="Origin.BottomCenter">
+                @foreach (ProductType value in Enum.GetValues(typeof(ProductType)))
+                {
+                    <MudSelectItem Value="value" />
+                }
+            </MudSelect>
+            <div class="d-flex align-center justify-space-between mt-5">
+                <MudButton Variant="Variant.Filled" OnClick="SaveProduct" Color="Color.Primary" Class="ml-auto" >Register</MudButton>
+            </div>
+        </MudForm>
+    </MudContainer>
+</MudPaper>
+
+@code {
+    private Model.Product productModel = new Model.Product();
+  
+
+    private void SaveProduct()
+    {
+        var product = new Model.Product()
+            {
+                name = productModel.name,
+                price = productModel.price,
+                type = productModel.type
+            };
+
+         ProductService.SerializeProductsAsync(new List<Model.Product> { product });
+        navigationManager.NavigateTo("/allproduct");
+    }
+}

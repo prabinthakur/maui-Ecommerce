@@ -1,0 +1,125 @@
+﻿@page "/allproduct"
+@inject IDialogService DialogService
+@inject NavigationManager navigationManager
+@if (showCallAlert==false)
+{
+    <MudAlert Severity="Severity.Success" ContentAlignment="HorizontalAlignment.Center" ShowCloseIcon="true" CloseIconClicked="(() => showCallAlert=true)">@messgae</MudAlert>
+}
+<MudButton style="margin-bottom:15px" Color="Color.Dark" OnClick="@redirect" Variant="Variant.Filled">Add Product</MudButton>
+<MudTable  Items="@FilteredProducts()">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Products</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString1" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Price</MudTh>
+        <MudTh>Type</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nr">@context.name</MudTd>
+            <MudTd DataLabel="Sign">@context.price</MudTd>
+            <MudTd DataLabel="Name">@context.type</MudTd>
+            <MudTd Style="text-align: right">
+                <MudButton Variant="Variant.Filled" @onclick="@(() => EditProduct(@context))" Color="Color.Info">Edit</MudButton>
+                <MudButton Variant="Variant.Filled" @onclick="@(() => DeleteProduct(@context))" Color="Color.Error">Delete</MudButton>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+
+    @code {
+    private bool showCallAlert = true;
+    private string searchString1 = "";
+    private Element selectedItem1 = null;
+    private List<Model.Product> products = new List<Model.Product>();
+    public string messgae;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products ??= new List<Model.Product>();
+        products.AddRange(await ProductService.GetAllAsync());
+    }
+
+    private bool FilterFunc(Model.Product product, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (product.name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
+    private IEnumerable<Model.Product> FilteredProducts()
+    {
+        return products?.Where(product => FilterFunc(product, searchString1)) ?? Enumerable.Empty<Model.Product>();
+    }
+
+
+    private async Task EditProduct(Model.Product product)
+    {
+        try
+        {
+            var parameters = new DialogParameters<EditProduct_Dialog>();
+            var editedProduct = new Model.Product
+                {
+                    Id = product.Id,
+                    name = product.name,
+                    price = product.price,
+                    type = product.type
+                };
+            parameters.Add("editedProduct", editedProduct);
+
+            var result = await DialogService.Show<EditProduct_Dialog>("Edit Product", parameters).Result;
+            if (!result.Cancelled)
+            {
+                editedProduct = (Model.Product)result.Data;
+                await ProductService.UpdateAsync(product.Id, editedProduct);
+                products = await ProductService.GetAllAsync();
+                showCallAlert = false;
+                messgae = "Product was Edit successfully";
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private void CloseMe(bool value)
+    {
+        if (value)
+        {
+            showCallAlert = true;  
+        }
+    }
+
+    private async Task DeleteProduct(Model.Product product)
+    {
+        var parameters = new DialogParameters<DeleteProduct_Dialog>();
+        parameters.Add(x => x.ContentText, "Are you sure you want to remove this product?");
+        parameters.Add(x => x.ButtonText, "Yes");
+        parameters.Add(x => x.Color, Color.Success);
+
+        var result = await DialogService.Show<DeleteProduct_Dialog>("Confirm", parameters).Result;
+
+        if (!result.Cancelled)
+        {
+            await ProductService.DeleteAsync(product.Id);
+            products = await ProductService.GetAllAsync();
+            showCallAlert = false;
+            messgae = "Product was Deleted successfully";
+        }
+    }
+
+    public void redirect()
+    {
+        navigationManager.NavigateTo("/addproduct");
+    }
+
+}

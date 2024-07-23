@@ -1,0 +1,49 @@
+﻿@page "/sales"
+
+<MudDataGrid T="Model.Order" Items="@orders" SortMode="SortMode.Multiple" Filterable="true" QuickFilter="@_quickFilter">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Orders</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="Memeber Number" Sortable="false" Filterable="false" />
+        <PropertyColumn Property="x => x.TotalAmount" Title="Total Amount" />
+        <PropertyColumn Property="x => x.Date" Title="Order Date" Filterable="false" />
+        <TemplateColumn Header="Products" Filterable="false" Sortable="false">
+            <HeaderTemplate>Products</HeaderTemplate>
+            <CellTemplate>
+                @foreach (var orderItem in context.Item.OrderItems)
+                {
+                    <p>@orderItem.Product.name - Quantity: @orderItem.Quantity</p>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+
+
+@code {
+    private IEnumerable<Model.Order> orders = new List<Model.Order>();
+    private string _searchString;
+    private DateOnly? _filterDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        orders = await OrderService.GetAllAsync();
+    }
+
+    private Func<Model.Order, bool> _quickFilter => order =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString) && !_filterDate.HasValue)
+            return true;
+
+        bool containsSearchString = string.IsNullOrWhiteSpace(_searchString) ||
+                                    order.Number.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                    order.TotalAmount.ToString().Contains(_searchString);
+
+        return containsSearchString;
+    };
+}
